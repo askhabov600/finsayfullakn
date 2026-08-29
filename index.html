@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Калькулятор рассрочки</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  :root{
+    --page: #F6F6F2;
+    --card: #FFFFFF;
+    --field: #F4F3EE;
+    --ink: #16160F;
+    --ink-60: #82817A;
+    --line: #EBEAE3;
+    --accent: #0F6B4C;
+    --accent-soft: #EAF4EE;
+    --accent-line: #D8EADF;
+  }
+  *{ box-sizing: border-box; }
+  html, body{ margin:0; padding:0; }
+  body{
+    background: var(--page);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding: 40px 18px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .card{
+    width:100%;
+    max-width: 400px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 30px 26px 28px;
+    box-shadow: 0 1px 2px rgba(20,20,15,.04), 0 32px 64px -32px rgba(20,20,15,.22);
+  }
+
+  .card h1{
+    font-size: 19px;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 22px;
+    letter-spacing: -0.01em;
+  }
+
+  .switch{
+    position: relative;
+    display:flex;
+    background: var(--field);
+    border-radius: 14px;
+    padding: 4px;
+    margin-bottom: 24px;
+  }
+  .switch-indicator{
+    position:absolute;
+    top:4px; bottom:4px; left:4px;
+    width: calc(50% - 4px);
+    background:#fff;
+    border-radius: 11px;
+    box-shadow: 0 1px 3px rgba(20,20,15,.10);
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+  }
+  .switch.mode-without .switch-indicator{ transform: translateX(100%); }
+  .tab{
+    position:relative; z-index:1;
+    flex:1;
+    border:none; background:none;
+    padding: 11px 6px;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-60);
+    cursor:pointer;
+    transition: color .2s ease;
+  }
+  .tab.active{ color: var(--ink); }
+
+  .field{ margin-bottom: 14px; }
+  .field label{
+    display:block;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--ink-60);
+    margin-bottom: 7px;
+  }
+  .field-box{
+    display:flex; align-items:center;
+    background: var(--field);
+    border: 1.5px solid transparent;
+    border-radius: 14px;
+    padding: 0 16px;
+    height: 52px;
+    transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+  }
+  .field-box:focus-within{
+    border-color: var(--accent);
+    background:#fff;
+    box-shadow: 0 0 0 4px rgba(15,107,76,0.08);
+  }
+  .field-box input{
+    flex:1;
+    border:none; outline:none; background:transparent;
+    font-family: inherit;
+    font-size: 16.5px;
+    font-weight: 600;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    padding:0;
+    width:100%;
+    min-width: 0;
+  }
+  .field-box .unit{
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-60);
+    padding-left: 8px;
+    flex-shrink: 0;
+  }
+  #dp-field.hidden{ display:none; }
+
+  .divider{
+    height: 1px;
+    background: var(--line);
+    margin: 22px 0 22px;
+  }
+
+  .result{
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    border-radius: 20px;
+    padding: 22px 20px 6px;
+  }
+  .result .total-label{
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--ink-60);
+    margin-bottom: 5px;
+  }
+  .result .total{
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 18px;
+    font-variant-numeric: tabular-nums;
+  }
+  .result .total .cur{
+    font-size: 0.48em;
+    font-weight: 600;
+    color: var(--ink-60);
+    margin-left: 4px;
+  }
+  .row{
+    display:flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 12px 0;
+    border-top: 1px solid rgba(15,107,76,0.12);
+    font-size: 13.5px;
+  }
+  .row span:first-child{ color: var(--ink-60); font-weight: 500; }
+  .row span:last-child{
+    font-weight: 700;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .y-hint{
+    display:flex;
+    justify-content:flex-end;
+    gap: 6px;
+    align-items: baseline;
+    margin-top: 12px;
+    padding: 0 2px;
+  }
+  .y-hint span:first-child{
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: var(--ink-60);
+    opacity: .6;
+  }
+  .y-hint span:last-child{
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink-60);
+    opacity: .6;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .btn-primary {
+    display: block;
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 16px;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 22px;
+    transition: opacity 0.2s;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+
+  .modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 18px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+  }
+  .modal.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal-card {
+    background: var(--card);
+    width: 100%;
+    max-width: 400px;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transform: translateY(15px);
+    transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+  }
+  .modal.active .modal-card { transform: translateY(0); }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .modal-header h3 {
+    margin: 0;
+    font-size: 17px;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 26px;
+    line-height: 1;
+    color: var(--ink-60);
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s;
+  }
+  .modal-close:hover {
+    color: var(--ink);
+  }
+
+  .modal-card textarea {
+    width: 100%;
+    height: 180px;
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ink);
+    resize: none;
+    outline: none;
+    margin-top: 8px;
+    margin-bottom: 16px;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+  }
+  .btn-secondary {
+    background: var(--field);
+    color: var(--ink);
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .btn-secondary:hover { background: var(--line); }
+
+  @media (max-width: 360px){
+    .result .total{ font-size: 33px; }
+  }
+
+  /* Стили PDF */
+  #pdf-container {
+    position: fixed;
+    left: -10000px;
+    top: 0;
+    width: 794px;
+    height: 1120px;
+    background: #fff;
+    pointer-events: none;
+    z-index: -1;
+  }
+  #pdf-template,
+  .pdf-sheet {
+    width: 794px;
+    height: 1120px;
+    background: #FFFFFF;
+    padding: 56px 60px 48px;
+    font-family: 'Inter', sans-serif;
+    color: var(--ink);
+    box-sizing: border-box;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .pdf-header-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 20px;
+    margin-bottom: 40px; /* Немного увеличил отступ для баланса */
+    flex-shrink: 0;
+  }
+  .pdf-title {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--accent);
+    margin: 0;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    text-align: left;
+  }
+  .pdf-date { font-size: 15px; font-weight: 600; color: var(--ink-60); padding-bottom: 4px; }
+
+  .pdf-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .pdf-product {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 32px;
+    color: var(--ink);
+    text-align: center;
+    line-height: 1.3;
+    display: none; /* По умолчанию скрыто, появится если вписать название */
+  }
+
+  .pdf-highlight {
+    background: var(--accent);
+    color: #FFF;
+    border-radius: 22px;
+    padding: 48px 36px;
+    text-align: center;
+    margin-bottom: 28px;
+    flex-shrink: 0;
+  }
+  .pdf-highlight-label { font-size: 16px; font-weight: 500; opacity: 0.9; margin-bottom: 12px; }
+  .pdf-highlight-val { font-size: 52px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+
+  .pdf-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: 150px;
+    gap: 18px;
+  }
+  .pdf-box {
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 28px 26px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .pdf-box-label {
+    font-size: 13px;
+    color: var(--ink-60);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+  }
+  .pdf-box-val { font-size: 26px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; word-break: break-word; }
+
+  .pdf-footer {
+    border-top: 2px solid var(--line);
+    padding-top: 20px;
+    margin-top: 28px;
+    text-align: center;
+    color: var(--ink-60);
+    font-size: 13px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+<div class="card" id="calc-card">
+  <h1>Калькулятор рассрочки</h1>
+
+  <div class="switch" id="switch">
+    <span class="switch-indicator"></span>
+    <button class="tab" data-mode="with">С первым взносом</button>
+    <button class="tab active" data-mode="without">Без взноса</button>
+  </div>
+
+  <div class="field">
+    <label for="cost">Стоимость товара</label>
+    <div class="field-box">
+      <input id="cost" type="text" inputmode="numeric" value="100.000">
+      <span class="unit">₽</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="months">Срок рассрочки</label>
+    <div class="field-box">
+      <input id="months" type="number" min="1" max="24" value="6">
+      <span class="unit">мес.</span>
+    </div>
+  </div>
+
+  <div class="field hidden" id="dp-field">
+    <label for="dp">Первоначальный взнос</label>
+    <div class="field-box">
+      <input id="dp" type="text" inputmode="numeric" value="0">
+      <span class="unit">₽</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="result">
+    <div class="total-label">Итоговая стоимость</div>
+    <div class="total"><span id="out-total" data-val="0">0</span><span class="cur">₽</span></div>
+
+    <div class="row"><span>Первоначальный взнос</span><span id="out-dp" data-val="0">—</span></div>
+    <div class="row"><span>Ежемесячный платёж</span><span id="out-monthly" data-val="0">—</span></div>
+    <div class="row"><span>Переплата в месяц</span><span id="out-overpay-month">—</span></div>
+    <div class="row"><span>Вся переплата</span><span id="out-overpay-total">—</span></div>
+
+    <div class="y-hint"><span>Y</span><span id="out-y">0%</span></div>
+  </div>
+
+  <button class="btn-primary" onclick="openShare()">Поделиться расчётом</button>
+  <button class="btn-secondary pdf-btn" style="display: block; width: 100%; margin-top: 10px; font-family: inherit; font-size: 14.5px;" onclick="downloadPDF()">Скачать PDF</button>
+</div>
+
+<div class="modal" id="shareModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Отправить расчёт</h3>
+      <button class="modal-close" onclick="closeShare()">&times;</button>
+    </div>
+    
+    <div class="field">
+      <label for="share-product">Название товара</label>
+      <div class="field-box" style="height: 44px;">
+        <input id="share-product" type="text" placeholder="Например: iPhone 15" oninput="updateShareText()">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="share-phone">Номер телефона</label>
+      <div class="field-box" style="height: 44px;">
+        <input id="share-phone" type="tel" placeholder="+7 (999) 000-00-00">
+      </div>
+    </div>
+
+    <textarea id="share-text" readonly></textarea>
+    
+    <div class="modal-actions">
+      <button class="btn-secondary" style="flex: 1.2;" onclick="copyShareText(this)">Скопировать</button>
+      <button class="btn-primary" style="margin-top:0; flex: 1;" onclick="shareWhatsApp()">Поделиться</button>
+    </div>
+  </div>
+</div>
+
+<div id="pdf-container">
+  <div id="pdf-template" class="pdf-sheet">
+    <div class="pdf-header-wrapper">
+      <h1 class="pdf-title">FINSAYFULLAKH</h1>
+      <div class="pdf-date" id="pdf-date">01.01.2024</div>
+    </div>
+
+    <div class="pdf-body">
+      <!-- Элемент скрыт по умолчанию, появится при наличии названия товара -->
+      <div class="pdf-product" id="pdf-product-name"></div>
+
+      <div class="pdf-highlight">
+        <div class="pdf-highlight-label">Ежемесячный платёж</div>
+        <div class="pdf-highlight-val" id="pdf-val-monthly">0 ₽</div>
+      </div>
+
+      <div class="pdf-grid">
+        <div class="pdf-box">
+          <div class="pdf-box-label">Стоимость товара</div>
+          <div class="pdf-box-val" id="pdf-val-cost">0 ₽</div>
+        </div>
+        <div class="pdf-box">
+          <div class="pdf-box-label">Первый взнос</div>
+          <div class="pdf-box-val" id="pdf-val-dp">0 ₽</div>
+        </div>
+        <div class="pdf-box">
+          <div class="pdf-box-label">Срок рассрочки</div>
+          <div class="pdf-box-val" id="pdf-val-months">0 мес.</div>
+        </div>
+        <div class="pdf-box" style="background: var(--accent-soft); border-color: var(--accent-line);">
+          <div class="pdf-box-label" style="color: var(--accent);">Итоговая сумма</div>
+          <div class="pdf-box-val" id="pdf-val-total">0 ₽</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pdf-footer">
+      Расчёт является предварительным. Ежемесячный платёж округлён вверх до 50₽.
+    </div>
+  </div>
+</div>
+
+<script>
+function ceil50(n)  { return Math.ceil(n / 50) * 50; }
+function round100(n) { return Math.round(n / 100) * 100; }
+
+function calc(cost, months, mode, dp) {
+  var blank = dp === null;
+  var suggestedDp = suggestDp(cost, months, mode);
+  var enteredDp = blank ? suggestedDp : dp;
+
+  var financedAmount = cost + enteredDp;
+  var totalFinanced = financedAmount + (financedAmount * 0.05 * months);
+  
+  var basePayment = months > 0 ? totalFinanced / months : 0;
+  var monthly = ceil50(basePayment);
+  
+  var total = monthly * months;
+  var overpayTotal = total - cost;
+  if (overpayTotal < 0) overpayTotal = 0; 
+  
+  var overpayMonth = months > 0 ? overpayTotal / months : 0;
+  var y = cost !== 0 ? overpayTotal / cost : 0;
+
+  return { dp: enteredDp, monthly: monthly, total: total, overpayTotal: overpayTotal, overpayMonth: overpayMonth, y: y };
+}
+
+function suggestDp(cost, months, mode) {
+  return mode === 'with' ? ceil50(cost * 0.2) : 0;
+}
+
+function money(n) {
+  return Math.round(n).toLocaleString('ru-RU').replace(/\u00A0/g, '.');
+}
+function digitsOnly(str) {
+  return (str || '').replace(/\D/g, '');
+}
+function readAmount(input) {
+  return Number(digitsOnly(input.value)) || 0;
+}
+function writeAmount(input, n) {
+  input.value = n > 0 ? money(n) : '0';
+}
+function bindThousands(input, onChange) {
+  input.addEventListener('input', function () {
+    var pos = input.selectionStart;
+    var before = input.value.length;
+    var raw = digitsOnly(input.value).replace(/^0+(?=\d)/, '');
+    input.value = raw === '' ? '' : money(Number(raw));
+    var diff = input.value.length - before;
+    input.setSelectionRange(pos + diff, pos + diff);
+    onChange();
+  });
+}
+
+var costEl = document.getElementById('cost');
+var monthsEl = document.getElementById('months');
+var dpEl = document.getElementById('dp');
+var dpField = document.getElementById('dp-field');
+var switchEl = document.getElementById('switch');
+var tabButtons = document.querySelectorAll('.tab');
+
+var mode = 'without';
+var dpTouched = true;
+
+function refreshDpPlaceholder() {
+  if (dpTouched) return;
+  writeAmount(dpEl, suggestDp(readAmount(costEl), Number(monthsEl.value) || 1, mode));
+}
+
+function render() {
+  var cost = readAmount(costEl);
+  var months = Math.max(1, Number(monthsEl.value) || 1);
+  var dp = dpTouched ? readAmount(dpEl) : null;
+  var r = calc(cost, months, mode, dp);
+
+  document.getElementById('out-total').textContent = money(r.total);
+  document.getElementById('out-dp').textContent = money(r.dp) + ' ₽';
+  document.getElementById('out-monthly').textContent = money(r.monthly) + ' ₽ × ' + months;
+  document.getElementById('out-overpay-month').textContent = money(r.overpayMonth) + ' ₽';
+  document.getElementById('out-overpay-total').textContent = money(r.overpayTotal) + ' ₽';
+  document.getElementById('out-y').textContent = (r.y * 100).toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + '%';
+
+  document.getElementById('out-total').dataset.val = money(r.total);
+  document.getElementById('out-dp').dataset.val = money(r.dp);
+  document.getElementById('out-monthly').dataset.val = money(r.monthly);
+  document.getElementById('cost').dataset.val = money(cost);
+  
+  if (document.getElementById('shareModal').classList.contains('active')) {
+      updateShareText();
+  }
+}
+
+tabButtons.forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    mode = btn.dataset.mode;
+    tabButtons.forEach(function (b) { b.classList.toggle('active', b === btn); });
+    switchEl.classList.toggle('mode-without', mode === 'without');
+    
+    if (mode === 'with') {
+        dpTouched = false;
+    } else {
+        writeAmount(dpEl, 0);
+        dpTouched = true;
+    }
+    
+    dpField.classList.toggle('hidden', mode === 'without');
+    refreshDpPlaceholder();
+    render();
+  });
+});
+
+bindThousands(costEl, function () { refreshDpPlaceholder(); render(); });
+bindThousands(dpEl, function () { dpTouched = true; render(); });
+monthsEl.addEventListener('input', function () { refreshDpPlaceholder(); render(); });
+
+switchEl.classList.add('mode-without');
+render();
+
+function updateShareText() {
+  var product = document.getElementById('share-product').value || 'Товар';
+  var cost = document.getElementById('cost').dataset.val || '0';
+  var dp = document.getElementById('out-dp').dataset.val || '0';
+  var months = document.getElementById('months').value || '0';
+  var monthly = document.getElementById('out-monthly').dataset.val || '0';
+  var total = document.getElementById('out-total').dataset.val || '0';
+
+  var text = `🏷️ *РАССРОЧКА: ${product}*\n\n` +
+             `💵 Стоимость товара: ${cost} ₽\n` +
+             `🏦 Первоначальный взнос: ${dp} ₽\n` +
+             `📆 Срок: ${months} мес.\n` +
+             `✅ *Ежемесячный платёж:* ${monthly} ₽\n` +
+             `💰 *ИТОГОВАЯ СУММА:* ${total} ₽\n\n` +
+             `⚡ Платёж округлён вверх до 50₽, итог = ${monthly} ₽ × ${months} мес.`;
+             
+  document.getElementById('share-text').value = text;
+}
+
+function openShare() {
+  document.getElementById('shareModal').classList.add('active');
+  updateShareText();
+}
+
+function closeShare() {
+  document.getElementById('shareModal').classList.remove('active');
+}
+
+function copyShareText(btn) {
+  var textarea = document.getElementById('share-text');
+  textarea.select();
+  textarea.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(textarea.value).then(() => {
+    var oldText = btn.textContent;
+    btn.textContent = 'Скопировано!';
+    setTimeout(() => { btn.textContent = oldText; }, 2000);
+  }).catch(err => {
+    console.error('Ошибка копирования: ', err);
+  });
+}
+
+function shareWhatsApp() {
+  var phoneInput = document.getElementById('share-phone').value;
+  var phone = digitsOnly(phoneInput); 
+  var text = document.getElementById('share-text').value;
+  var encodedText = encodeURIComponent(text);
+  
+  var url = 'https://wa.me/' + phone + '?text=' + encodedText;
+  
+  window.open(url, '_blank');
+  closeShare();
+}
+
+function toSheetCanvas(canvas) {
+  var SHEET_W = 794;
+  var SHEET_H = 1120;
+  var want = SHEET_W / SHEET_H;
+  var got = canvas.width / canvas.height;
+  if (Math.abs(got - want) < 0.08) return canvas;
+
+  var vw = window.innerWidth || SHEET_W;
+  var scale = canvas.width / vw;
+  if (!(scale >= 1 && scale <= 4)) scale = 2;
+
+  var srcW = Math.min(canvas.width, Math.round(SHEET_W * scale));
+  var srcH = Math.min(canvas.height, Math.round(SHEET_H * scale));
+  var out = document.createElement('canvas');
+  out.width = SHEET_W * 2;
+  out.height = SHEET_H * 2;
+  out.getContext('2d').drawImage(canvas, 0, 0, srcW, srcH, 0, 0, out.width, out.height);
+  return out;
+}
+
+function saveSheetPdf(canvas) {
+  var sheet = toSheetCanvas(canvas);
+  var JsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if (!JsPDF) return false;
+  var pdf = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  pdf.addImage(sheet.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 210, 297);
+  pdf.save('raschet-rassrochki.pdf');
+  return true;
+}
+
+function downloadPDF() {
+  var product = document.getElementById('share-product').value.trim(); // Получаем значение, обрезаем пробелы
+  var cost = document.getElementById('cost').dataset.val || '0';
+  var dp = document.getElementById('out-dp').dataset.val || '0';
+  var months = document.getElementById('months').value || '0';
+  var monthly = document.getElementById('out-monthly').dataset.val || '0';
+  var total = document.getElementById('out-total').dataset.val || '0';
+
+  var pdfProductName = document.getElementById('pdf-product-name');
+  
+  // Если товар вписали - показываем, иначе полностью скрываем блок
+  if (product) {
+    pdfProductName.textContent = product;
+    pdfProductName.style.display = 'block';
+  } else {
+    pdfProductName.style.display = 'none';
+  }
+
+  document.getElementById('pdf-val-cost').textContent = cost + ' ₽';
+  document.getElementById('pdf-val-dp').textContent = dp + ' ₽';
+  document.getElementById('pdf-val-months').textContent = months + ' мес.';
+  document.getElementById('pdf-val-monthly').textContent = monthly + ' ₽';
+  document.getElementById('pdf-val-total').textContent = total + ' ₽';
+  document.getElementById('pdf-date').textContent = new Date().toLocaleDateString('ru-RU');
+
+  var source = document.getElementById('pdf-template');
+  var btn = document.querySelector('.pdf-btn');
+  var oldText = btn.textContent;
+  btn.textContent = 'Сохранение...';
+
+  var host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;height:1120px;background:#fff;z-index:-1;overflow:hidden;';
+  var clone = source.cloneNode(true);
+  clone.id = 'pdf-template-print';
+  clone.className = 'pdf-sheet';
+  host.appendChild(clone);
+  document.body.appendChild(host);
+
+  function cleanup() {
+    if (host.parentNode) host.parentNode.removeChild(host);
+    btn.textContent = oldText;
+  }
+
+  var opt = {
+    margin: 0,
+    filename: 'raschet-rassrochki.pdf',
+    image: { type: 'jpeg', quality: 1 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: 'avoid-all' }
+  };
+
+  html2pdf()
+    .set(opt)
+    .from(clone)
+    .toCanvas()
+    .get('canvas')
+    .then(function (canvas) {
+      if (!saveSheetPdf(canvas)) {
+        return html2pdf().set(opt).from(clone).save();
+      }
+    })
+    .then(cleanup)
+    .catch(function () {
+      html2pdf().set(opt).from(source).save().then(cleanup).catch(cleanup);
+    });
+}
+</script>
+</body>
+</html>
