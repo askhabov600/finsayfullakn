@@ -546,13 +546,18 @@ function calc(cost, months, mode, dp) {
   var suggestedDp = suggestDp(cost, months, mode);
   var enteredDp = blank ? suggestedDp : dp;
 
-  var financedAmount = cost + enteredDp;
+  // Вычитаем первоначальный взнос из стоимости товара
+  var financedAmount = cost - enteredDp;
+  if (financedAmount < 0) financedAmount = 0;
+
+  // Рассчитываем сумму к выплате с учетом наценки на оставшуюся часть
   var totalFinanced = financedAmount + (financedAmount * 0.05 * months);
   
   var basePayment = months > 0 ? totalFinanced / months : 0;
   var monthly = ceil50(basePayment);
   
-  var total = monthly * months;
+  // Итоговая стоимость для клиента = первый взнос + все ежемесячные платежи
+  var total = enteredDp + (monthly * months);
   var overpayTotal = total - cost;
   if (overpayTotal < 0) overpayTotal = 0; 
   
