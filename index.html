@@ -552,6 +552,11 @@ function calc(cost, months, mode, dp) {
 
   // Рассчитываем сумму к выплате с учетом наценки на оставшуюся часть
   var totalFinanced = financedAmount + (financedAmount * 0.05 * months);
+
+  // Если выбрана рассрочка без первоначального взноса — сверху всегда добавляем ещё 5%
+  if (mode === 'without') {
+    totalFinanced += financedAmount * 0.05;
+  }
   
   var basePayment = months > 0 ? totalFinanced / months : 0;
   var monthly = ceil50(basePayment);
