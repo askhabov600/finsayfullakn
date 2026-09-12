@@ -334,7 +334,7 @@
     align-items: flex-end;
     border-bottom: 3px solid var(--accent);
     padding-bottom: 20px;
-    margin-bottom: 40px; /* Немного увеличил отступ для баланса */
+    margin-bottom: 40px;
     flex-shrink: 0;
   }
   .pdf-title {
@@ -361,7 +361,7 @@
     color: var(--ink);
     text-align: center;
     line-height: 1.3;
-    display: none; /* По умолчанию скрыто, появится если вписать название */
+    display: none;
   }
 
   .pdf-highlight {
@@ -503,7 +503,6 @@
     </div>
 
     <div class="pdf-body">
-      <!-- Элемент скрыт по умолчанию, появится при наличии названия товара -->
       <div class="pdf-product" id="pdf-product-name"></div>
 
       <div class="pdf-highlight">
@@ -546,26 +545,27 @@ function calc(cost, months, mode, dp) {
   var suggestedDp = suggestDp(cost, months, mode);
   var enteredDp = blank ? suggestedDp : dp;
 
-  // Вычитаем первоначальный взнос из стоимости товара
-  var financedAmount = cost - enteredDp;
-  if (financedAmount < 0) financedAmount = 0;
+  if (enteredDp > cost) enteredDp = cost;
 
-  // Рассчитываем сумму к выплате с учетом наценки на оставшуюся часть
-  var totalFinanced = financedAmount + (financedAmount * 0.05 * months);
+  var totalWithMarkup = 0;
 
-  // Если выбрана рассрочка без первоначального взноса — сверху всегда добавляем ещё 5%
-  if (mode === 'without') {
-    totalFinanced += financedAmount * 0.05;
+  if (mode === 'with') {
+    totalWithMarkup = cost + (cost * 0.05 * months);
+  } else {
+    enteredDp = 0;
+    totalWithMarkup = cost + (cost * 0.05 * months) + (cost * 0.05);
   }
-  
-  var basePayment = months > 0 ? totalFinanced / months : 0;
+
+  var remainingToPay = totalWithMarkup - enteredDp;
+  if (remainingToPay < 0) remainingToPay = 0;
+
+  var basePayment = months > 0 ? remainingToPay / months : 0;
   var monthly = ceil50(basePayment);
-  
-  // Итоговая стоимость для клиента = первый взнос + все ежемесячные платежи
+
   var total = enteredDp + (monthly * months);
   var overpayTotal = total - cost;
   if (overpayTotal < 0) overpayTotal = 0; 
-  
+
   var overpayMonth = months > 0 ? overpayTotal / months : 0;
   var y = cost !== 0 ? overpayTotal / cost : 0;
 
@@ -748,7 +748,7 @@ function saveSheetPdf(canvas) {
 }
 
 function downloadPDF() {
-  var product = document.getElementById('share-product').value.trim(); // Получаем значение, обрезаем пробелы
+  var product = document.getElementById('share-product').value.trim();
   var cost = document.getElementById('cost').dataset.val || '0';
   var dp = document.getElementById('out-dp').dataset.val || '0';
   var months = document.getElementById('months').value || '0';
@@ -757,7 +757,6 @@ function downloadPDF() {
 
   var pdfProductName = document.getElementById('pdf-product-name');
   
-  // Если товар вписали - показываем, иначе полностью скрываем блок
   if (product) {
     pdfProductName.textContent = product;
     pdfProductName.style.display = 'block';
